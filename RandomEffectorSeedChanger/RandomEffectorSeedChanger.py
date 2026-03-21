@@ -1,133 +1,114 @@
 """
 Random Effector Seed Changer — Python Tag для Cinema 4D 2024/2025+
 
-Скрипт для Python-тега, который находит в сцене Random Effector
-и каждые N кадров меняет ему seed на новое значение.
+Скрипт для Python-тега: находит Random Effector в сцене
+и каждые N кадров меняет ему seed.
 
 Настройка:
-    1. Создайте Python Tag на любом объекте в сцене.
-    2. Вставьте этот код в Python Tag.
-    3. В User Data тега появятся параметры:
-       - Frame Interval: через сколько кадров менять seed (по умолчанию 10)
-       - Effector Name: имя Random Effector в сцене (по умолчанию "Random")
-       - Seed Offset: шаг изменения seed (по умолчанию 1)
-
-Как это работает:
-    Скрипт проверяет текущий кадр. Каждый раз, когда номер кадра
-    кратен заданному интервалу, Random Effector получает новый seed.
+    1. Создайте Python Tag на любом объекте.
+    2. Вставьте этот код.
+    3. Вручную добавьте User Data на теге (правый клик → User Data → Add User Data):
+       - "Frame Interval" (Integer) — через сколько кадров менять seed
+       - "Seed Offset" (Integer) — шаг seed
+    4. Убедитесь, что Random Effector в сцене называется "Random"
+       (или измените переменную EFFECTOR_NAME ниже).
 """
 
 import c4d
 
-# ID параметров User Data
-UD_FRAME_INTERVAL = 1   # Интервал в кадрах
-UD_EFFECTOR_NAME  = 2   # Имя эффектора в сцене
-UD_SEED_OFFSET    = 3   # Шаг seed
+# ============================================================
+# НАСТРОЙКИ — меняйте здесь
+# ============================================================
+EFFECTOR_NAME  = "Random"   # Имя Random Effector в сцене
+FRAME_INTERVAL = 10         # Через сколько кадров менять seed
+SEED_OFFSET    = 1          # Шаг изменения seed
+# ============================================================
 
-# ID параметра seed в Random Effector
-RANDOM_EFFECTOR_SEED = c4d.MGRANDOMEFFECTOR_SEED
-
-
-def add_userdata(tag):
-    """Создаёт User Data параметры на теге, если их ещё нет."""
-
-    ud = tag.GetUserDataContainer()
-    existing_ids = {desc[0][1].id for desc in ud}
-
-    # Frame Interval
-    if UD_FRAME_INTERVAL not in existing_ids:
-        bc = c4d.GetCustomDataTypeDefault(c4d.DTYPE_LONG)
-        bc[c4d.DESC_NAME] = "Frame Interval"
-        bc[c4d.DESC_SHORT_NAME] = "Interval"
-        bc[c4d.DESC_DEFAULT] = 10
-        bc[c4d.DESC_MIN] = 1
-        bc[c4d.DESC_MAX] = 10000
-        tag.AddUserData(bc)
-        tag[c4d.ID_USERDATA, UD_FRAME_INTERVAL] = 10
-
-    # Effector Name
-    if UD_EFFECTOR_NAME not in existing_ids:
-        bc = c4d.GetCustomDataTypeDefault(c4d.DTYPE_STRING)
-        bc[c4d.DESC_NAME] = "Effector Name"
-        bc[c4d.DESC_SHORT_NAME] = "Name"
-        bc[c4d.DESC_DEFAULT] = "Random"
-        tag.AddUserData(bc)
-        tag[c4d.ID_USERDATA, UD_EFFECTOR_NAME] = "Random"
-
-    # Seed Offset
-    if UD_SEED_OFFSET not in existing_ids:
-        bc = c4d.GetCustomDataTypeDefault(c4d.DTYPE_LONG)
-        bc[c4d.DESC_NAME] = "Seed Offset"
-        bc[c4d.DESC_SHORT_NAME] = "Offset"
-        bc[c4d.DESC_DEFAULT] = 1
-        bc[c4d.DESC_MIN] = 1
-        bc[c4d.DESC_MAX] = 100000
-        tag.AddUserData(bc)
-        tag[c4d.ID_USERDATA, UD_SEED_OFFSET] = 1
+# Тип Random Effector (MoGraph)
+RANDOM_EFFECTOR_TYPE = 1018643
 
 
-def find_object_by_name(doc, name):
-    """Ищет объект по имени во всей иерархии сцены."""
+def find_effector(doc, name):
+    """Рекурсивный поиск объекта по имени и типу Random Effector."""
 
-    def search(op, name):
-        while op:
-            if op.GetName() == name:
-                return op
-            found = search(op.GetDown(), name)
+    def recurse(obj):
+        while obj:
+            if obj.GetName() == name and obj.GetType() == RANDOM_EFFECTOR_TYPE:
+                return obj
+            found = recurse(obj.GetDown())
             if found:
                 return found
-            op = op.GetNext()
+            obj = obj.GetNext()
         return None
 
-    return search(doc.GetFirstObject(), name)
-
-
-def find_random_effector(doc, name):
-    """
-    Ищет Random Effector по имени.
-    Сначала ищет среди объектов сцены (MoGraph эффекторы — это объекты).
-    """
-    obj = find_object_by_name(doc, name)
-    if obj and obj.CheckType(c4d.Omgrandomeffector):
-        return obj
-    return None
+    return recurse(doc.GetFirstObject())
 
 
 def main():
     doc = c4d.documents.GetActiveDocument()
-    tag = op  # op — это текущий Python Tag
 
-    # Создаём User Data при первом запуске
-    add_userdata(tag)
+    # Читаем User Data если есть, иначе используем константы сверху
+    tag = op
 
-    # Читаем параметры
-    interval = tag[c4d.ID_USERDATA, UD_FRAME_INTERVAL]
-    effector_name = tag[c4d.ID_USERDATA, UD_EFFECTOR_NAME]
-    seed_offset = tag[c4d.ID_USERDATA, UD_SEED_OFFSET]
+    interval = FRAME_INTERVAL
+    offset = SEED_OFFSET
 
-    if not interval or interval < 1:
-        interval = 10
-    if not effector_name:
-        effector_name = "Random"
-    if not seed_offset or seed_offset < 1:
-        seed_offset = 1
+    # Пробуем прочитать User Data (ID 1 = interval, ID 2 = offset)
+    try:
+        val = tag[c4d.ID_USERDATA, 1]
+        if val is not None and val >= 1:
+            interval = int(val)
+    except Exception:
+        pass
+
+    try:
+        val = tag[c4d.ID_USERDATA, 2]
+        if val is not None and val >= 1:
+            offset = int(val)
+    except Exception:
+        pass
 
     # Текущий кадр
-    frame = doc.GetTime().GetFrame(doc.GetFps())
+    fps = doc.GetFps()
+    frame = doc.GetTime().GetFrame(fps)
 
-    # Проверяем, кратен ли текущий кадр интервалу
+    # Проверяем кратность кадра интервалу
     if frame % interval != 0:
         return
 
-    # Находим Random Effector
-    effector = find_random_effector(doc, effector_name)
+    # Ищем Random Effector
+    effector = find_effector(doc, EFFECTOR_NAME)
     if effector is None:
+        print("[SeedChanger] Random Effector '{}' не найден!".format(EFFECTOR_NAME))
         return
 
-    # Вычисляем новый seed на основе текущего кадра
-    new_seed = (frame // interval) * seed_offset
+    # Новый seed
+    new_seed = (frame // interval) * offset
 
-    # Устанавливаем новый seed
-    effector[RANDOM_EFFECTOR_SEED] = new_seed
-    effector.Message(c4d.MSG_UPDATE)
-    c4d.EventAdd()
+    # Пробуем установить seed разными способами (совместимость версий)
+    seed_set = False
+
+    # Способ 1: MGRANDOMEFFECTOR_SEED
+    if hasattr(c4d, "MGRANDOMEFFECTOR_SEED"):
+        effector[c4d.MGRANDOMEFFECTOR_SEED] = new_seed
+        seed_set = True
+
+    # Способ 2: ID_MG_BASEEFFECTOR_SEED
+    if not seed_set and hasattr(c4d, "ID_MG_BASEEFFECTOR_SEED"):
+        effector[c4d.ID_MG_BASEEFFECTOR_SEED] = new_seed
+        seed_set = True
+
+    # Способ 3: прямой числовой ID seed параметра
+    if not seed_set:
+        # Перебираем описание объекта и ищем параметр с "seed" в имени
+        desc = effector.GetDescription(c4d.DESCFLAGS_DESC_NONE)
+        for bc, paramid, groupid in desc:
+            name = bc[c4d.DESC_NAME]
+            if name and "seed" in name.lower():
+                effector[paramid] = new_seed
+                seed_set = True
+                break
+
+    if seed_set:
+        effector.Message(c4d.MSG_UPDATE)
+        c4d.EventAdd()
