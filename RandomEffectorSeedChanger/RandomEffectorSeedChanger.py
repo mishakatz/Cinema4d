@@ -12,6 +12,13 @@ Random Effector Seed Changer — Python Tag для Cinema 4D 2024/2025+
        - "Seed Offset" (Integer) — шаг seed
     4. Убедитесь, что Random Effector в сцене называется "Random"
        (или измените переменную EFFECTOR_NAME ниже).
+
+Закольцовка (LOOP_ENABLED = True):
+    Seed на последнем шаге сцены совпадает с первым.
+    Пример: 100 кадров, интервал 10 → 10 шагов (кадры 0,10,20...90).
+    Шаг 0 и шаг 10 дали бы одинаковый seed, но шага 10 нет (кадр 100
+    = кадр 0 при зацикленном воспроизведении). Seed на кадре 90
+    будет предпоследним, а при повторе кадр 0 снова даст первый seed.
 """
 
 import c4d
@@ -22,6 +29,8 @@ import c4d
 EFFECTOR_NAME  = "Random"   # Имя Random Effector в сцене
 FRAME_INTERVAL = 10         # Через сколько кадров менять seed
 SEED_OFFSET    = 1          # Шаг изменения seed
+LOOP_ENABLED   = True       # Закольцевать seed (последний шаг = первый)
+BASE_SEED      = 0          # Начальный seed (от него идёт отсчёт)
 # ============================================================
 
 # Тип Random Effector (MoGraph)
@@ -53,6 +62,9 @@ def main():
     interval = FRAME_INTERVAL
     offset = SEED_OFFSET
 
+    loop = LOOP_ENABLED
+    base_seed = BASE_SEED
+
     # Пробуем прочитать User Data (ID 1 = interval, ID 2 = offset)
     try:
         val = tag[c4d.ID_USERDATA, 1]
@@ -82,8 +94,22 @@ def main():
         print("[SeedChanger] Random Effector '{}' не найден!".format(EFFECTOR_NAME))
         return
 
+    # Номер шага (какой по счёту seed)
+    step = frame // interval
+
+    # Закольцовка: последний шаг совпадает с первым
+    if loop:
+        # Длина сцены в кадрах
+        min_frame = doc.GetMinTime().GetFrame(fps)
+        max_frame = doc.GetMaxTime().GetFrame(fps)
+        total_frames = max_frame - min_frame
+        # Сколько шагов помещается в сцену (без последнего, он = первый)
+        total_steps = total_frames // interval
+        if total_steps > 0:
+            step = step % total_steps
+
     # Новый seed
-    new_seed = (frame // interval) * offset
+    new_seed = base_seed + step * offset
 
     # Пробуем установить seed разными способами (совместимость версий)
     seed_set = False
