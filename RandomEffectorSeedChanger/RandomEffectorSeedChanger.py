@@ -42,7 +42,6 @@ def add_userdata(tag):
         bc[c4d.DESC_DEFAULT] = 10
         bc[c4d.DESC_MIN] = 1
         bc[c4d.DESC_MAX] = 10000
-        bc[c4d.DESC_CUSTOMGUI] = c4d.CUSTOMGUI_LONGEDITSLIDER
         tag.AddUserData(bc)
         tag[c4d.ID_USERDATA, UD_FRAME_INTERVAL] = 10
 
@@ -63,7 +62,6 @@ def add_userdata(tag):
         bc[c4d.DESC_DEFAULT] = 1
         bc[c4d.DESC_MIN] = 1
         bc[c4d.DESC_MAX] = 100000
-        bc[c4d.DESC_CUSTOMGUI] = c4d.CUSTOMGUI_LONGEDITSLIDER
         tag.AddUserData(bc)
         tag[c4d.ID_USERDATA, UD_SEED_OFFSET] = 1
 
