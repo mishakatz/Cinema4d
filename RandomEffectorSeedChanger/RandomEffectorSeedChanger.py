@@ -54,9 +54,9 @@ def find_effector(doc, name):
 
 
 def main():
-    doc = c4d.documents.GetActiveDocument()
-
-    # Читаем User Data если есть, иначе используем константы сверху
+    # ВАЖНО: используем глобальную переменную doc (не GetActiveDocument!)
+    # При рендере GetActiveDocument() возвращает документ редактора,
+    # а doc — документ, которому принадлежит тег (правильный при рендере).
     tag = op
 
     interval = FRAME_INTERVAL
@@ -137,4 +137,6 @@ def main():
 
     if seed_set:
         effector.Message(c4d.MSG_UPDATE)
-        c4d.EventAdd()
+        # EventAdd() только в редакторе, при рендере он не нужен и может мешать
+        if c4d.threading.GeIsMainThread():
+            c4d.EventAdd()
