@@ -1,5 +1,24 @@
 """
-GenerateNumberTextSplines — Cinema 4D Script (Script Manager)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ,,,,,      ,,,,,
+       | o o |    | o o |
+       |  >  |    |  >  |
+        \ - /      \ - /
+         ~~~        ~~~
+            \      /
+             \    /
+              \  /
+               \/
+              (  )
+               \/
+
+  GenerateNumberTextSplines
+  Cinema 4D Script (Script Manager)
+
+  Создано Мишей Кацем для курса FAZA
+  школы ZERNO
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Генерирует строку цифр в виде Text Spline объектов.
 Настройки задаются в переменных ниже.
