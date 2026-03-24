@@ -37,13 +37,18 @@ def main():
     doc.InsertObject(parent)
     doc.AddUndo(c4d.UNDOTYPE_NEWOBJ, parent)
 
-    for i, num in enumerate(range(num_from, num_to + 1)):
+    count = num_to - num_from + 1
+    offset = (count - 1) * SPACING * 0.5
+
+    # Вставляем в обратном порядке, чтобы в Object Manager порядок был 1,2,3,4
+    for i, num in enumerate(reversed(range(num_from, num_to + 1))):
+        idx = count - 1 - i  # позиция по X: 0,1,2,...
         text_spline = c4d.BaseObject(c4d.Osplinetext)
         text_spline.SetName(str(num))
         text_spline[c4d.PRIM_TEXT_TEXT] = str(num)
         text_spline[c4d.PRIM_TEXT_HEIGHT] = HEIGHT
         text_spline[c4d.PRIM_TEXT_ALIGN] = 1  # Center
-        text_spline.SetAbsPos(Vector(i * SPACING, 0, 0))
+        text_spline.SetAbsPos(Vector(idx * SPACING - offset, 0, 0))
         doc.InsertObject(text_spline, parent=parent)
         doc.AddUndo(c4d.UNDOTYPE_NEWOBJ, text_spline)
 
